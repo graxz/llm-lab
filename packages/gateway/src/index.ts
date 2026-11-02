@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+export * from './models.js';
 
 export type GatewayMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 export type GenerationRequest = { generationId?: string; messages: GatewayMessage[]; model: string; temperature: number; maxOutputTokens: number; stream?: boolean };
