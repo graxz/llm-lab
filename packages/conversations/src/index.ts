@@ -4,6 +4,16 @@ export type GenerationStatus = 'pending' | 'streaming' | 'completed' | 'failed' 
 export type Generation = { id: string; conversationId: string; userMessageId: string; model: string; temperature: number; status: GenerationStatus; content: string; promptTokens: number | null; completionTokens: number | null; errorCode: string | null; startedAt: Date; finishedAt: Date | null };
 export type GenerationRepository = { insert(generation: Generation): void; update(generation: Generation): void; findById(id: string): Generation | null };
 export type AssistantMessageRepository = { insert(message: { id: string; conversationId: string; generationId: string; content: string; sequence: number; createdAt: Date }): void };
+export type ConversationSummary = { id: string; workspaceId: string; title: string; status: 'active' | 'archived'; updatedAt: Date };
+export type HistoryRepository = { list(workspaceId: string, userId: string, input: { limit: number; offset: number; includeArchived: boolean }): ConversationSummary[]; messages(conversationId: string, userId: string): Array<{ id: string; content: string; sequence: number; createdAt: Date }> };
+
+export class ConversationHistoryService {
+  constructor(private readonly repository: HistoryRepository) {}
+  list(workspaceId: string, userId: string, limit = 20, offset = 0, includeArchived = false): ConversationSummary[] {
+    return this.repository.list(workspaceId, userId, { limit: Math.min(Math.max(limit, 1), 100), offset: Math.max(offset, 0), includeArchived });
+  }
+  messages(conversationId: string, userId: string) { return this.repository.messages(conversationId, userId).sort((left, right) => left.sequence - right.sequence); }
+}
 
 export class InvalidGenerationTransitionError extends Error { constructor() { super('Invalid generation state transition'); this.name = 'InvalidGenerationTransitionError'; } }
 export class GenerationPersistenceError extends Error { constructor() { super('Generation result could not be persisted'); this.name = 'GenerationPersistenceError'; } }
