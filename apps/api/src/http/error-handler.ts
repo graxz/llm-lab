@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { AppError } from '@llm-lab/domain';
+import { AppError, safePublicError } from '@llm-lab/domain';
 import { ZodError } from 'zod';
 
 import { validationDetails } from './validation.js';
@@ -22,7 +22,8 @@ export function registerErrorHandler(app: FastifyInstance): void {
       });
     }
 
-    request.log.error(error);
-    return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Unexpected internal error' });
+    request.log.error({ err: error }, 'Unhandled request error');
+    const descriptor = safePublicError(error);
+    return reply.code(descriptor.statusCode).send(descriptor);
   });
 }
