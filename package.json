@@ -5,6 +5,9 @@
     "apps/*",
     "packages/*"
   ],
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  },
   "scripts": {
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
