@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { AssistantInput, AssistantRepository, ConversationInput, ConversationRepository, SessionInput, UserRepository, UserSnapshotLike, WorkspaceInput, WorkspaceRepository } from '@llm-lab/auth';
+import type { AssistantInput, AssistantRepository, ConversationInput, ConversationRepository, MessageInput, MessageRepository, SessionInput, UserRepository, UserSnapshotLike, WorkspaceInput, WorkspaceRepository } from '@llm-lab/auth';
 
 export type DatabaseConnection = Database.Database;
 export type UserRecord = UserSnapshotLike;
@@ -61,6 +61,21 @@ export function createDatabase(filename = process.env.DATABASE_PATH ?? ':memory:
       FOREIGN KEY (assistant_id) REFERENCES assistants(id),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      author_id TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('user', 'assistant', 'system')),
+      content TEXT NOT NULL,
+      sequence INTEGER NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('persisted')),
+      idempotency_key TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE (conversation_id, idempotency_key),
+      UNIQUE (conversation_id, sequence),
+      FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+      FOREIGN KEY (author_id) REFERENCES users(id)
+    );
   `);
   return database;
 }
@@ -112,7 +127,22 @@ export function createAssistantRepository(database: DatabaseConnection): Assista
 
 export function createConversationRepository(database: DatabaseConnection): ConversationRepository {
   const insertStatement = database.prepare('INSERT INTO conversations (id, workspace_id, assistant_id, user_id, title, status, created_at, updated_at) VALUES (@id, @workspaceId, @assistantId, @userId, @title, @status, @createdAt, @updatedAt)');
-  return { insert(conversation: ConversationInput): void { insertStatement.run({ id: conversation.id, workspaceId: conversation.workspaceId, assistantId: conversation.assistantId, userId: conversation.userId, title: conversation.title, status: conversation.status, createdAt: conversation.createdAt.toISOString(), updatedAt: conversation.updatedAt.toISOString() }); } };
+  const findStatement = database.prepare('SELECT id, status FROM conversations WHERE id = ? AND user_id = ?');
+  return {
+    insert(conversation: ConversationInput): void { insertStatement.run({ id: conversation.id, workspaceId: conversation.workspaceId, assistantId: conversation.assistantId, userId: conversation.userId, title: conversation.title, status: conversation.status, createdAt: conversation.createdAt.toISOString(), updatedAt: conversation.updatedAt.toISOString() }); },
+    findForUser(id, userId) { const row = findStatement.get(id, userId) as { id: string; status: 'active' | 'archived' } | undefined; return row ?? null; },
+  };
+}
+
+export function createMessageRepository(database: DatabaseConnection): MessageRepository {
+  const findStatement = database.prepare('SELECT * FROM messages WHERE conversation_id = ? AND idempotency_key = ?');
+  const sequenceStatement = database.prepare('SELECT COALESCE(MAX(sequence), 0) + 1 AS next_sequence FROM messages WHERE conversation_id = ?');
+  const insertStatement = database.prepare('INSERT INTO messages (id, conversation_id, author_id, type, content, sequence, status, idempotency_key, created_at) VALUES (@id, @conversationId, @authorId, @type, @content, @sequence, @status, @idempotencyKey, @createdAt)');
+  return {
+    findByIdempotencyKey(conversationId, key) { const row = findStatement.get(conversationId, key) as MessageRow | undefined; return row ? mapMessageRow(row) : null; },
+    nextSequence(conversationId) { return (sequenceStatement.get(conversationId) as { next_sequence: number }).next_sequence; },
+    insert(message) { insertStatement.run({ id: message.id, conversationId: message.conversationId, authorId: message.authorId, type: message.type, content: message.content, sequence: message.sequence, status: message.status, idempotencyKey: message.idempotencyKey, createdAt: message.createdAt.toISOString() }); },
+  };
 }
 
 export function createWorkspaceRepository(database: DatabaseConnection): WorkspaceRepository {
@@ -170,6 +200,7 @@ type UserRow = { id: string; name: string; email: string; password_hash: string;
 type WorkspaceRow = { id: string; user_id: string; name: string; is_default: number; created_at: string };
 type SessionRow = { id: string; user_id: string; token_hash: string; expires_at: string; created_at: string };
 type AssistantRow = { id: string; workspace_id: string; name: string; description: string | null; system_instructions: string; model: string; temperature: number; status: 'active' | 'inactive' | 'deleted'; created_at: string; updated_at: string };
+type MessageRow = { id: string; conversation_id: string; author_id: string; type: 'user'; content: string; sequence: number; status: 'persisted'; idempotency_key: string; created_at: string };
 
 function mapUserRow(row: UserRow): UserRecord {
   return { id: row.id, name: row.name, email: row.email, passwordHash: row.password_hash, status: row.status, createdAt: new Date(row.created_at), updatedAt: new Date(row.updated_at) };
@@ -181,4 +212,8 @@ function mapWorkspaceRow(row: WorkspaceRow): WorkspaceRecord {
 
 function mapAssistantRow(row: AssistantRow): AssistantInput {
   return { id: row.id, workspaceId: row.workspace_id, name: row.name, description: row.description, systemInstructions: row.system_instructions, model: row.model, temperature: row.temperature, status: row.status as 'active' | 'inactive', createdAt: new Date(row.created_at), updatedAt: new Date(row.updated_at) };
+}
+
+function mapMessageRow(row: MessageRow): MessageInput {
+  return { id: row.id, conversationId: row.conversation_id, authorId: row.author_id, type: row.type, content: row.content, sequence: row.sequence, status: row.status, idempotencyKey: row.idempotency_key, createdAt: new Date(row.created_at) };
 }

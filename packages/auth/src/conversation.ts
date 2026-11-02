@@ -3,7 +3,7 @@ import { AppError } from '@llm-lab/domain';
 import type { WorkspaceAccess } from './assistant.js';
 
 export type ConversationInput = { id: string; workspaceId: string; assistantId: string; userId: string; title: string; status: 'active' | 'archived'; createdAt: Date; updatedAt: Date };
-export type ConversationRepository = { insert(conversation: ConversationInput): void };
+export type ConversationRepository = { insert(conversation: ConversationInput): void; findForUser(id: string, userId: string): { id: string; status: 'active' | 'archived' } | null };
 export type ConversationAccess = { findByIdForWorkspace(id: string, workspaceId: string): { id: string; status: 'active' | 'inactive' } | null };
 
 export class ConversationAssistantUnavailableError extends AppError {

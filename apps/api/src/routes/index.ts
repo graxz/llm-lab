@@ -7,6 +7,7 @@ import {
   CreateAssistantUseCase,
   ManageAssistantUseCase,
   CreateConversationUseCase,
+  SendMessageUseCase,
   type WorkspaceRepository,
 } from '@llm-lab/auth';
 
@@ -15,6 +16,7 @@ import { registerHealthRoutes } from './health.route.js';
 import { registerWorkspaceRoutes } from './workspace.route.js';
 import { registerAssistantRoutes } from './assistant.route.js';
 import { registerConversationRoutes } from './conversation.route.js';
+import { registerMessageRoutes } from './message.route.js';
 
 export type RouteDependencies = {
   registerUser: RegisterUserUseCase;
@@ -25,6 +27,7 @@ export type RouteDependencies = {
   createAssistant: CreateAssistantUseCase;
   manageAssistant: ManageAssistantUseCase;
   createConversation: CreateConversationUseCase;
+  sendMessage: SendMessageUseCase;
 };
 
 export function registerRoutes(app: FastifyInstance, dependencies: RouteDependencies): void {
@@ -33,4 +36,5 @@ export function registerRoutes(app: FastifyInstance, dependencies: RouteDependen
   registerWorkspaceRoutes(app, dependencies);
   registerAssistantRoutes(app, dependencies);
   registerConversationRoutes(app, dependencies);
+  registerMessageRoutes(app, dependencies);
 }
