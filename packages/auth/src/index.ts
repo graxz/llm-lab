@@ -5,6 +5,7 @@ import { AppError, User } from '@llm-lab/domain';
 export * from './assistant.js';
 export * from './conversation.js';
 export * from './message.js';
+export * from './context.js';
 
 const scrypt = promisify(scryptCallback);
 
