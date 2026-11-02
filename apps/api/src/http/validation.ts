@@ -17,6 +17,15 @@ export const loginUserSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+export const createAssistantSchema = z.object({
+  workspaceId: z.string().trim().min(1),
+  name: z.string().trim().min(1).max(100),
+  description: z.string().trim().max(500).optional(),
+  systemInstructions: z.string().trim().min(1).max(12000),
+  model: z.enum(['gpt-4o-mini', 'gpt-4o']),
+  temperature: z.number().min(0).max(2),
+});
+
 export function parseBody<TSchema extends ZodType>(schema: TSchema, body: unknown): TSchema['_output'] {
   return schema.parse(body);
 }

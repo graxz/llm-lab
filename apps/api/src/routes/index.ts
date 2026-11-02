@@ -4,12 +4,14 @@ import {
   LoginUserUseCase,
   LogoutUserUseCase,
   RegisterUserUseCase,
+  CreateAssistantUseCase,
   type WorkspaceRepository,
 } from '@llm-lab/auth';
 
 import { registerAuthRoutes } from './auth.route.js';
 import { registerHealthRoutes } from './health.route.js';
 import { registerWorkspaceRoutes } from './workspace.route.js';
+import { registerAssistantRoutes } from './assistant.route.js';
 
 export type RouteDependencies = {
   registerUser: RegisterUserUseCase;
@@ -17,10 +19,12 @@ export type RouteDependencies = {
   logoutUser: LogoutUserUseCase;
   getAuthenticatedUser: GetAuthenticatedUserUseCase;
   workspaces: WorkspaceRepository;
+  createAssistant: CreateAssistantUseCase;
 };
 
 export function registerRoutes(app: FastifyInstance, dependencies: RouteDependencies): void {
   registerHealthRoutes(app);
   registerAuthRoutes(app, dependencies);
   registerWorkspaceRoutes(app, dependencies);
+  registerAssistantRoutes(app, dependencies);
 }
