@@ -32,3 +32,52 @@ Salvar a resposta gerada e os metadados da execução de forma auditável.
 - Falha do provedor não cria uma resposta concluída falsa.
 - Uso e custo são armazenados quando o provedor informar esses dados.
 - Uma nova tentativa não sobrescreve indevidamente a tentativa anterior.
+
+## Especificação spec-driven
+
+### User story
+Como plataforma, quero persistir o resultado e os metadados de cada tentativa para permitir histórico e diagnóstico.
+
+### Pré-condições
+- Existe uma geração registrada.
+- O conteúdo final ou parcial foi recebido.
+- A conversa continua acessível.
+
+### Cenários de aceitação
+
+#### Cenário 1
+Quando uma geração terminar com sucesso, então conteúdo e metadados devem ser persistidos.
+
+#### Cenário 2
+Quando o provedor falhar, então a tentativa deve ser marcada como failed com diagnóstico seguro.
+
+#### Cenário 3
+Quando houver retry, então uma nova tentativa deve ser identificável sem sobrescrever indevidamente a anterior.
+
+### Regras de negócio
+- Resposta só é completed após persistência bem-sucedida.
+- Uso, latência e custo são armazenados quando disponíveis.
+- Erros não incluem segredos.
+
+### Invariantes
+- Toda geração possui status final explícito.
+- Histórico reaberto reproduz o conteúdo persistido.
+
+### Erros e respostas esperadas
+
+- Geração marcada como `failed` quando a persistência final falhar.
+- Retry não deve sobrescrever a tentativa anterior.
+- Falha de persistência deve gerar log correlacionável.
+
+### Fora do escopo deste RF
+- Retenção configurável.
+- Exportação de dados.
+- Arquivamento em storage externo.
+
+### Definition of Done
+- [ ] Fluxo principal implementado.
+- [ ] Cenários de aceitação cobertos por testes.
+- [ ] Autorização e isolamento por workspace validados.
+- [ ] Erros públicos e logs técnicos separados.
+- [ ] Observabilidade mínima adicionada.
+- [ ] Documentação atualizada após a implementação.

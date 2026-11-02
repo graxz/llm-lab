@@ -34,3 +34,53 @@ Enviar o contexto ao modelo por meio de uma camada de integração isolada do do
 Entrada: mensagens, modelo, temperatura, limite de saída e opções de stream.
 
 Saída: stream ou resposta normalizada contendo conteúdo, uso, modelo e metadados.
+
+## Especificação spec-driven
+
+### User story
+Como plataforma, quero chamar modelos através de um gateway para desacoplar o domínio dos provedores externos.
+
+### Pré-condições
+- O contexto foi montado.
+- O modelo está habilitado.
+- As credenciais do provedor estão disponíveis no ambiente.
+
+### Cenários de aceitação
+
+#### Cenário 1
+Dada uma solicitação válida, quando o gateway chamar o adaptador, então o contrato interno deve ser traduzido para o provedor.
+
+#### Cenário 2
+Dado timeout ou falha externa, quando a chamada terminar, então um erro normalizado deve ser devolvido.
+
+#### Cenário 3
+Quando uma resposta for recebida, então modelo e uso devem ser registrados quando disponíveis.
+
+### Regras de negócio
+- Domínio não importa SDK de provedor.
+- Timeout e limites são configuráveis.
+- Segredos nunca aparecem em logs.
+
+### Invariantes
+- Trocar o adaptador não exige alterar o caso de uso de conversa.
+- Toda chamada possui um identificador de geração.
+
+### Erros e respostas esperadas
+
+- `400` para parâmetros incompatíveis.
+- `408` para timeout.
+- `429` para limite do provedor.
+- `502` para falha externa normalizada.
+
+### Fora do escopo deste RF
+- Roteamento inteligente avançado.
+- Fine-tuning.
+- Execução de código gerado.
+
+### Definition of Done
+- [ ] Fluxo principal implementado.
+- [ ] Cenários de aceitação cobertos por testes.
+- [ ] Autorização e isolamento por workspace validados.
+- [ ] Erros públicos e logs técnicos separados.
+- [ ] Observabilidade mínima adicionada.
+- [ ] Documentação atualizada após a implementação.

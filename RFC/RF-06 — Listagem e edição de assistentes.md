@@ -32,3 +32,54 @@ Cada geração deve guardar um snapshot mínimo da configuração usada:
 - modelo;
 - parâmetros;
 - identificador da versão, se existir.
+
+## Especificação spec-driven
+
+### User story
+Como usuário, quero administrar meus assistentes sem alterar silenciosamente o histórico de execuções anteriores.
+
+### Pré-condições
+- O usuário está autenticado.
+- O assistente pertence ao workspace acessível.
+
+### Cenários de aceitação
+
+#### Cenário 1
+Quando o usuário listar assistentes, então somente os autorizados devem aparecer.
+
+#### Cenário 2
+Quando o usuário editar um assistente, então novos usos devem receber a configuração atualizada.
+
+#### Cenário 3
+Quando um assistente for desativado, então ele não deve ser oferecido para novas conversas.
+
+#### Cenário 4
+Quando uma configuração for alterada, então gerações anteriores devem continuar auditáveis.
+
+### Regras de negócio
+- Execuções devem armazenar snapshot de modelo, instruções e parâmetros.
+- Exclusão não pode quebrar referências históricas.
+- Operações devem validar workspace e usuário.
+
+### Invariantes
+- Histórico não depende do estado atual do assistente.
+- Assistente inativo não inicia nova execução.
+
+### Erros e respostas esperadas
+
+- `404` quando o assistente não existir.
+- `403` quando estiver fora do escopo autorizado.
+- `409` para conflito de atualização, se versionamento for usado.
+
+### Fora do escopo deste RF
+- Controle de acesso por equipe.
+- Versionamento visual completo.
+- Auditoria administrativa avançada.
+
+### Definition of Done
+- [ ] Fluxo principal implementado.
+- [ ] Cenários de aceitação cobertos por testes.
+- [ ] Autorização e isolamento por workspace validados.
+- [ ] Erros públicos e logs técnicos separados.
+- [ ] Observabilidade mínima adicionada.
+- [ ] Documentação atualizada após a implementação.

@@ -30,3 +30,47 @@ Garantir que todo usuário tenha um ambiente inicial para organizar assistentes 
 - Falha na criação do workspace.
 - Workspace não encontrado.
 - Usuário sem permissão de acesso.
+
+## Especificação spec-driven
+
+### User story
+Como novo usuário, quero receber um workspace inicial para ter um contexto de trabalho imediatamente disponível.
+
+### Pré-condições
+- O cadastro do usuário foi validado.
+- Ainda não existe workspace inicial para o usuário.
+
+### Cenários de aceitação
+
+#### Cenário 1
+Dado um novo usuário, quando o cadastro for concluído, então um workspace inicial deve ser criado.
+
+#### Cenário 2
+Dado o workspace inicial, quando o usuário acessar a plataforma, então ele deve estar selecionado ou ser selecionável.
+
+### Regras de negócio
+- O workspace deve possuir identificador único.
+- O workspace deve estar associado ao usuário criador.
+- Recursos futuros devem referenciar workspaceId.
+
+### Invariantes
+- Todo usuário novo possui pelo menos um workspace acessível.
+- Usuários não podem acessar workspaces de terceiros.
+
+### Erros e respostas esperadas
+
+- `409` quando já existe workspace inicial incompatível.
+- `500` quando a criação atômica falhar.
+
+### Fora do escopo deste RF
+- Colaboração entre membros.
+- Convites.
+- Papéis avançados.
+
+### Definition of Done
+- [ ] Fluxo principal implementado.
+- [ ] Cenários de aceitação cobertos por testes.
+- [ ] Autorização e isolamento por workspace validados.
+- [ ] Erros públicos e logs técnicos separados.
+- [ ] Observabilidade mínima adicionada.
+- [ ] Documentação atualizada após a implementação.
