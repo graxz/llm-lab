@@ -69,6 +69,8 @@ export function createUserRepository(database: DatabaseConnection): UserReposito
 
 export function createWorkspaceRepository(database: DatabaseConnection): WorkspaceRepository {
   const insertWorkspaceStatement = database.prepare('INSERT INTO workspaces (id, user_id, name, is_default, created_at) VALUES (@id, @userId, @name, @isDefault, @createdAt)');
+  const findAllWorkspacesStatement = database.prepare('SELECT id, user_id, name, is_default, created_at FROM workspaces WHERE user_id = ? ORDER BY created_at ASC');
+  const findWorkspaceByIdStatement = database.prepare('SELECT id, user_id, name, is_default, created_at FROM workspaces WHERE id = ? AND user_id = ?');
   const findDefaultWorkspaceStatement = database.prepare('SELECT id, user_id, name, is_default, created_at FROM workspaces WHERE user_id = ? AND is_default = 1');
   return {
     insert(workspace) {
@@ -79,6 +81,13 @@ export function createWorkspaceRepository(database: DatabaseConnection): Workspa
         isDefault: workspace.isDefault ? 1 : 0,
         createdAt: workspace.createdAt.toISOString(),
       });
+    },
+    findAllByUserId(userId: string): WorkspaceRecord[] {
+      return (findAllWorkspacesStatement.all(userId) as WorkspaceRow[]).map(mapWorkspaceRow);
+    },
+    findByIdForUser(workspaceId: string, userId: string): WorkspaceRecord | null {
+      const row = findWorkspaceByIdStatement.get(workspaceId, userId) as WorkspaceRow | undefined;
+      return row ? mapWorkspaceRow(row) : null;
     },
     findDefaultByUserId(userId: string): WorkspaceRecord | null {
       const row = findDefaultWorkspaceStatement.get(userId) as WorkspaceRow | undefined;

@@ -30,6 +30,8 @@ export type UserRepository = {
 
 export type WorkspaceRepository = {
   insert(workspace: WorkspaceInput): void;
+  findAllByUserId(userId: string): WorkspaceInput[];
+  findByIdForUser(workspaceId: string, userId: string): WorkspaceInput | null;
   findDefaultByUserId(userId: string): WorkspaceInput | null;
 };
 
@@ -98,6 +100,13 @@ export class WorkspaceNotFoundError extends AppError {
   constructor() {
     super('WORKSPACE_NOT_FOUND', 404, 'Workspace not found');
     this.name = 'WorkspaceNotFoundError';
+  }
+}
+
+export class WorkspaceAccessDeniedError extends AppError {
+  constructor() {
+    super('WORKSPACE_ACCESS_DENIED', 403, 'You do not have access to this workspace');
+    this.name = 'WorkspaceAccessDeniedError';
   }
 }
 

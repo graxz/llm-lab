@@ -27,6 +27,8 @@ describe('authentication routes', () => {
     registerErrorHandler(app);
     const workspaceRepository = {
       insert: (workspace: { id: string; userId: string; name: string; isDefault: boolean; createdAt: Date }) => workspaces.set(workspace.id, workspace),
+      findAllByUserId: (userId: string) => [...workspaces.values()].filter((workspace) => workspace.userId === userId),
+      findByIdForUser: (workspaceId: string, userId: string) => [...workspaces.values()].find((workspace) => workspace.id === workspaceId && workspace.userId === userId) ?? null,
       findDefaultByUserId: (userId: string) => [...workspaces.values()].find((workspace) => workspace.userId === userId && workspace.isDefault) ?? null,
     };
     const registerUser = new RegisterUserUseCase({ users: userRepository, workspaces: workspaceRepository, transaction: (operation) => operation(), passwordHasher, idGenerator: () => `id-${++sequence}` });
@@ -78,6 +80,25 @@ describe('authentication routes', () => {
     const response = await app.inject({ method: 'GET', url: '/workspaces/default', headers: { cookie: sessionCookie } });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ workspace: { userId: 'id-1', isDefault: true } });
+  });
+
+  it('lists only authorized workspaces and validates selection on the backend', async () => {
+    const app = createTestApp();
+    await app.inject({ method: 'POST', url: '/auth/register', payload: { name: 'A', email: 'a@example.com', password: '12345678', passwordConfirmation: '12345678' } });
+    const login = await app.inject({ method: 'POST', url: '/auth/login', payload: { email: 'a@example.com', password: '12345678' } });
+    const setCookie = login.headers['set-cookie'];
+    const sessionCookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie)?.split(';')[0];
+
+    const list = await app.inject({ method: 'GET', url: '/workspaces', headers: { cookie: sessionCookie } });
+    expect(list.statusCode).toBe(200);
+    expect(list.json()).toMatchObject({ workspaces: [{ id: 'id-2', userId: 'id-1', isDefault: true }] });
+
+    const selection = await app.inject({ method: 'POST', url: '/workspaces/id-2/select', headers: { cookie: sessionCookie } });
+    expect(selection.statusCode).toBe(200);
+    expect(selection.headers['set-cookie']).toEqual(expect.stringContaining('llm_lab_workspace=id-2'));
+
+    const forbidden = await app.inject({ method: 'POST', url: '/workspaces/foreign-workspace/select', headers: { cookie: sessionCookie } });
+    expect(forbidden.statusCode).toBe(403);
   });
 
   it('returns field-level validation details without route conditionals', async () => {
