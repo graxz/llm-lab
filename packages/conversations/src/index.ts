@@ -39,3 +39,13 @@ export class GenerationService {
   private transition(id: string, status: 'streaming'): Generation { const generation = this.required(id); if (generation.status !== 'pending') throw new InvalidGenerationTransitionError(); generation.status = status; this.dependencies.generations.update(generation); return generation; }
   private required(id: string): Generation { const generation = this.dependencies.generations.findById(id); if (!generation) throw new Error('Generation not found'); return generation; }
 }
+
+export type RegenerationSource = { conversationId: string; userMessageId: string; model: string; temperature: number; conversationActive: boolean };
+export class RegenerationNotAllowedError extends Error { constructor() { super('Conversation cannot be regenerated'); this.name = 'RegenerationNotAllowedError'; } }
+export class RegenerationService {
+  constructor(private readonly generations: GenerationService) {}
+  regenerate(source: RegenerationSource): Generation {
+    if (!source.conversationActive || !source.userMessageId) throw new RegenerationNotAllowedError();
+    return this.generations.create({ conversationId: source.conversationId, userMessageId: source.userMessageId, model: source.model, temperature: source.temperature });
+  }
+}
