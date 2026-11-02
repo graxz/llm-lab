@@ -50,3 +50,19 @@ export class RegenerationService {
     return this.generations.create({ conversationId: source.conversationId, userMessageId: source.userMessageId, model: source.model, temperature: source.temperature });
   }
 }
+
+export type Feedback = { id: string; generationId: string; userId: string; value: 'positive' | 'negative'; comment: string | null; createdAt: Date; updatedAt: Date };
+export type FeedbackRepository = { findByGenerationAndUser(generationId: string, userId: string): Feedback | null; insert(feedback: Feedback): void; update(feedback: Feedback): void };
+export class InvalidFeedbackError extends Error { constructor() { super('Feedback value or comment is invalid'); this.name = 'InvalidFeedbackError'; } }
+export class FeedbackService {
+  constructor(private readonly dependencies: { feedback: FeedbackRepository; generations: GenerationRepository; idGenerator?: () => string }) {}
+  save(input: { generationId: string; userId: string; value: 'positive' | 'negative'; comment?: string }): Feedback {
+    if (!['positive', 'negative'].includes(input.value) || (input.comment?.trim().length ?? 0) > 2000) throw new InvalidFeedbackError();
+    if (!this.dependencies.generations.findById(input.generationId)) throw new Error('Generation not found');
+    const now = new Date();
+    const existing = this.dependencies.feedback.findByGenerationAndUser(input.generationId, input.userId);
+    if (existing) { existing.value = input.value; existing.comment = input.comment?.trim() || null; existing.updatedAt = now; this.dependencies.feedback.update(existing); return existing; }
+    const feedback: Feedback = { id: (this.dependencies.idGenerator ?? randomUUID)(), generationId: input.generationId, userId: input.userId, value: input.value, comment: input.comment?.trim() || null, createdAt: now, updatedAt: now };
+    this.dependencies.feedback.insert(feedback); return feedback;
+  }
+}
