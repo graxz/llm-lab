@@ -2,6 +2,8 @@
   "dependencies": {
     "@llm-lab/auth": "file:../../packages/auth",
     "@llm-lab/database": "file:../../packages/database",
+    "@llm-lab/domain": "file:../../packages/domain",
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.4.0",
     "eslint": "^10.14.0",
     "fastify": "^5.12.8"
