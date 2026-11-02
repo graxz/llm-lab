@@ -24,4 +24,22 @@ describe('AiGateway', () => {
     const slow = { generate: vi.fn((): Promise<never> => new Promise(() => undefined)) };
     await expect(new AiGateway({ adapter: slow, timeoutMs: 5 }).generate(request)).rejects.toThrow(GatewayTimeoutError);
   });
+
+  it('emits started, deltas and completed events with one generation id', async () => {
+    const adapter = { generate: vi.fn(), stream: async function* () { yield { content: 'he' }; yield { content: 'llo' }; } };
+    const events = [];
+    for await (const event of new AiGateway({ adapter }).stream(request)) events.push(event);
+    expect(events.map((event) => event.type)).toEqual(['started', 'delta', 'delta', 'completed']);
+    expect(events[1]).toMatchObject({ content: 'he' });
+    expect(events[3]).toMatchObject({ content: 'hello' });
+    expect(new Set(events.map((event) => event.generationId)).size).toBe(1);
+  });
+
+  it('emits an opaque error event when the stream fails', async () => {
+    const adapter = { generate: vi.fn(), stream: async function* () { throw new Error('provider secret'); } };
+    const events = [];
+    for await (const event of new AiGateway({ adapter }).stream(request)) events.push(event);
+    expect(events.at(-1)).toMatchObject({ type: 'error', code: 'PROVIDER_FAILURE' });
+    expect(JSON.stringify(events)).not.toContain('provider secret');
+  });
 });
