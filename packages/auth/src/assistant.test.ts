@@ -5,7 +5,7 @@ describe('CreateAssistantUseCase', () => {
   function setup() {
     const saved: any[] = [];
     const useCase = new CreateAssistantUseCase({
-      assistants: { insert: (assistant) => saved.push(assistant) },
+      assistants: { insert: (assistant) => saved.push(assistant), findAllByWorkspaceId: () => saved, findByIdForWorkspace: (id) => saved.find((assistant) => assistant.id === id) ?? null, update: (assistant) => Object.assign(saved[0], assistant), softDelete: () => undefined },
       workspaces: { findByIdForUser: (workspaceId, userId) => workspaceId === 'workspace-1' && userId === 'user-1' ? { id: workspaceId, userId } : null },
       idGenerator: () => 'assistant-1',
     });

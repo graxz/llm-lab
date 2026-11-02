@@ -8,6 +8,7 @@ import {
   PasswordHasher,
   RegisterUserUseCase,
   CreateAssistantUseCase,
+  ManageAssistantUseCase,
 } from '@llm-lab/auth';
 import {
   createDatabase,
@@ -48,11 +49,12 @@ export function buildApp() {
   const logoutUser = new LogoutUserUseCase(sessions);
   const getAuthenticatedUser = new GetAuthenticatedUserUseCase({ users, sessions });
   const createAssistant = new CreateAssistantUseCase({ assistants, workspaces });
+  const manageAssistant = new ManageAssistantUseCase(assistants);
 
   app.addHook('onClose', async () => {
     database.close();
   });
 
-  registerRoutes(app, { registerUser, loginUser, logoutUser, getAuthenticatedUser, workspaces, createAssistant });
+  registerRoutes(app, { registerUser, loginUser, logoutUser, getAuthenticatedUser, workspaces, createAssistant, manageAssistant });
   return app;
 }
