@@ -27,6 +27,8 @@ function setup() {
   };
   const workspaceRepository = {
     insert: (workspace: any) => workspaces.set(workspace.id, workspace),
+    findAllByUserId: (userId: string) => [...workspaces.values()].filter((workspace) => workspace.userId === userId),
+    findByIdForUser: (workspaceId: string, userId: string) => [...workspaces.values()].find((workspace) => workspace.id === workspaceId && workspace.userId === userId) ?? null,
     findDefaultByUserId: (userId: string) => [...workspaces.values()].find((workspace) => workspace.userId === userId && workspace.isDefault) ?? null,
   };
   const dependencies = {
