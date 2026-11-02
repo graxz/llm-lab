@@ -1,21 +1,14 @@
 import Database from 'better-sqlite3';
-import type { UserSnapshot } from '@llm-lab/domain';
+import type { SessionInput, UserRepository, UserSnapshotLike, WorkspaceInput, WorkspaceRepository } from '@llm-lab/auth';
 
 export type DatabaseConnection = Database.Database;
-
-export type UserRecord = UserSnapshot;
-
-export type WorkspaceRecord = {
-  id: string;
-  userId: string;
-  name: string;
-  createdAt: Date;
-};
+export type UserRecord = UserSnapshotLike;
+export type WorkspaceRecord = WorkspaceInput;
+export type SessionRecord = SessionInput;
 
 export function createDatabase(filename = process.env.DATABASE_PATH ?? ':memory:'): DatabaseConnection {
   const database = new Database(filename);
   database.pragma('foreign_keys = ON');
-
   database.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -26,7 +19,6 @@ export function createDatabase(filename = process.env.DATABASE_PATH ?? ':memory:
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
-
     CREATE TABLE IF NOT EXISTS workspaces (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL UNIQUE,
@@ -34,30 +26,33 @@ export function createDatabase(filename = process.env.DATABASE_PATH ?? ':memory:
       created_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
-
   return database;
 }
 
-export function createUserRepository(database: DatabaseConnection) {
-  const findByEmailStatement = database.prepare(`
-    SELECT id, name, email, password_hash, status, created_at, updated_at
-    FROM users
-    WHERE email = ?
-  `);
-
-  const insertUserStatement = database.prepare(`
-    INSERT INTO users (id, name, email, password_hash, status, created_at, updated_at)
-    VALUES (@id, @name, @email, @passwordHash, @status, @createdAt, @updatedAt)
-  `);
+export function createUserRepository(database: DatabaseConnection): UserRepository {
+  const findByEmailStatement = database.prepare('SELECT id, name, email, password_hash, status, created_at, updated_at FROM users WHERE email = ?');
+  const findByIdStatement = database.prepare('SELECT id, name, email, password_hash, status, created_at, updated_at FROM users WHERE id = ?');
+  const insertUserStatement = database.prepare('INSERT INTO users (id, name, email, password_hash, status, created_at, updated_at) VALUES (@id, @name, @email, @passwordHash, @status, @createdAt, @updatedAt)');
 
   return {
-    findByEmail(email: string): UserRecord | null {
+    findByEmail(email) {
       const row = findByEmailStatement.get(email) as UserRow | undefined;
       return row ? mapUserRow(row) : null;
     },
-
-    insert(user: UserRecord): void {
+    findById(id) {
+      const row = findByIdStatement.get(id) as UserRow | undefined;
+      return row ? mapUserRow(row) : null;
+    },
+    insert(user) {
       insertUserStatement.run({
         id: user.id,
         name: user.name,
@@ -71,14 +66,10 @@ export function createUserRepository(database: DatabaseConnection) {
   };
 }
 
-export function createWorkspaceRepository(database: DatabaseConnection) {
-  const insertWorkspaceStatement = database.prepare(`
-    INSERT INTO workspaces (id, user_id, name, created_at)
-    VALUES (@id, @userId, @name, @createdAt)
-  `);
-
+export function createWorkspaceRepository(database: DatabaseConnection): WorkspaceRepository {
+  const insertWorkspaceStatement = database.prepare('INSERT INTO workspaces (id, user_id, name, created_at) VALUES (@id, @userId, @name, @createdAt)');
   return {
-    insert(workspace: WorkspaceRecord): void {
+    insert(workspace) {
       insertWorkspaceStatement.run({
         id: workspace.id,
         userId: workspace.userId,
@@ -89,30 +80,31 @@ export function createWorkspaceRepository(database: DatabaseConnection) {
   };
 }
 
-export function createUserRegistrationTransaction(database: DatabaseConnection): (operation: () => void) => void {
-  return (operation) => {
-    database.transaction(operation)();
+export function createSessionRepository(database: DatabaseConnection) {
+  const insertSessionStatement = database.prepare('INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at) VALUES (@id, @userId, @tokenHash, @expiresAt, @createdAt)');
+  const findByTokenHashStatement = database.prepare('SELECT id, user_id, token_hash, expires_at, created_at FROM sessions WHERE token_hash = ?');
+  const deleteByTokenHashStatement = database.prepare('DELETE FROM sessions WHERE token_hash = ?');
+  return {
+    insert(session: SessionRecord): void {
+      insertSessionStatement.run({ id: session.id, userId: session.userId, tokenHash: session.tokenHash, expiresAt: session.expiresAt.toISOString(), createdAt: session.createdAt.toISOString() });
+    },
+    findByTokenHash(tokenHash: string): SessionRecord | null {
+      const row = findByTokenHashStatement.get(tokenHash) as SessionRow | undefined;
+      return row ? { id: row.id, userId: row.user_id, tokenHash: row.token_hash, expiresAt: new Date(row.expires_at), createdAt: new Date(row.created_at) } : null;
+    },
+    deleteByTokenHash(tokenHash: string): void {
+      deleteByTokenHashStatement.run(tokenHash);
+    },
   };
 }
 
-type UserRow = {
-  id: string;
-  name: string;
-  email: string;
-  password_hash: string;
-  status: 'active' | 'inactive';
-  created_at: string;
-  updated_at: string;
-};
+export function createUserRegistrationTransaction(database: DatabaseConnection): (operation: () => void) => void {
+  return (operation) => database.transaction(operation)();
+}
+
+type UserRow = { id: string; name: string; email: string; password_hash: string; status: 'active' | 'inactive'; created_at: string; updated_at: string };
+type SessionRow = { id: string; user_id: string; token_hash: string; expires_at: string; created_at: string };
 
 function mapUserRow(row: UserRow): UserRecord {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    passwordHash: row.password_hash,
-    status: row.status,
-    createdAt: new Date(row.created_at),
-    updatedAt: new Date(row.updated_at),
-  };
+  return { id: row.id, name: row.name, email: row.email, passwordHash: row.password_hash, status: row.status, createdAt: new Date(row.created_at), updatedAt: new Date(row.updated_at) };
 }

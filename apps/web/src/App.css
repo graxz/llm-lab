@@ -85,6 +85,29 @@ h2 {
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
 }
 
+.auth-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 2rem;
+  padding: 0.25rem;
+  border-radius: 0.7rem;
+  background: #0b1425;
+}
+
+.tab {
+  flex: 1;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  background: transparent;
+  color: #a7b5cc;
+  font-size: 0.85rem;
+}
+
+.tab.active {
+  background: #263550;
+  color: #f8fafc;
+}
+
 form {
   display: grid;
   gap: 1rem;
