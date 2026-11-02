@@ -5,6 +5,7 @@ import {
   LogoutUserUseCase,
   RegisterUserUseCase,
   CreateAssistantUseCase,
+  ManageAssistantUseCase,
   type WorkspaceRepository,
 } from '@llm-lab/auth';
 
@@ -20,6 +21,7 @@ export type RouteDependencies = {
   getAuthenticatedUser: GetAuthenticatedUserUseCase;
   workspaces: WorkspaceRepository;
   createAssistant: CreateAssistantUseCase;
+  manageAssistant: ManageAssistantUseCase;
 };
 
 export function registerRoutes(app: FastifyInstance, dependencies: RouteDependencies): void {

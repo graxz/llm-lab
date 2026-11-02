@@ -27,6 +27,10 @@ export type CreateAssistantInput = {
 
 export type AssistantRepository = {
   insert(assistant: AssistantInput): void;
+  findAllByWorkspaceId(workspaceId: string): AssistantInput[];
+  findByIdForWorkspace(id: string, workspaceId: string): AssistantInput | null;
+  update(assistant: AssistantInput): void;
+  softDelete(id: string): void;
 };
 
 export type WorkspaceAccess = {
@@ -72,5 +76,24 @@ export class CreateAssistantUseCase {
     };
     this.dependencies.assistants.insert(assistant);
     return assistant;
+  }
+}
+
+export class ManageAssistantUseCase {
+  constructor(private readonly assistants: AssistantRepository) {}
+
+  list(workspaceId: string): AssistantInput[] { return this.assistants.findAllByWorkspaceId(workspaceId); }
+
+  update(id: string, workspaceId: string, input: Partial<Pick<AssistantInput, 'name' | 'description' | 'systemInstructions' | 'model' | 'temperature' | 'status'>>): AssistantInput {
+    const current = this.assistants.findByIdForWorkspace(id, workspaceId);
+    if (!current) throw new AppError('ASSISTANT_NOT_FOUND', 404, 'Assistant not found');
+    const updated = { ...current, ...input, updatedAt: new Date() };
+    this.assistants.update(updated);
+    return updated;
+  }
+
+  remove(id: string, workspaceId: string): void {
+    if (!this.assistants.findByIdForWorkspace(id, workspaceId)) throw new AppError('ASSISTANT_NOT_FOUND', 404, 'Assistant not found');
+    this.assistants.softDelete(id);
   }
 }
