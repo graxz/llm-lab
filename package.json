@@ -8,6 +8,7 @@
   "scripts": {
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
-    "typecheck": "npm run typecheck --workspaces"
+    "build:packages": "npm run build --workspace=@llm-lab/domain && npm run build --workspace=@llm-lab/auth && npm run build --workspace=@llm-lab/database",
+    "typecheck": "npm run build:packages && npm run typecheck --workspaces"
   }
 }
