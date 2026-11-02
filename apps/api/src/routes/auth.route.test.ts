@@ -4,11 +4,13 @@ import { describe, expect, it } from 'vitest';
 import { GetAuthenticatedUserUseCase, LoginUserUseCase, LogoutUserUseCase, PasswordHasher, RegisterUserUseCase, type SessionInput, type UserSnapshotLike } from '@llm-lab/auth';
 import { registerErrorHandler } from '../http/error-handler.js';
 import { registerAuthRoutes } from './auth.route.js';
+import { registerWorkspaceRoutes } from './workspace.route.js';
 
 describe('authentication routes', () => {
   function createTestApp() {
     const users = new Map<string, UserSnapshotLike>();
     const sessions = new Map<string, SessionInput>();
+    const workspaces = new Map<string, { id: string; userId: string; name: string; isDefault: boolean; createdAt: Date }>();
     const userRepository = {
       findByEmail: (email: string) => users.get(email) ?? null,
       findById: (id: string) => [...users.values()].find((user) => user.id === id) ?? null,
@@ -23,7 +25,11 @@ describe('authentication routes', () => {
     let sequence = 0;
     const app = Fastify();
     registerErrorHandler(app);
-    const registerUser = new RegisterUserUseCase({ users: userRepository, workspaces: { insert: () => undefined }, transaction: (operation) => operation(), passwordHasher, idGenerator: () => `id-${++sequence}` });
+    const workspaceRepository = {
+      insert: (workspace: { id: string; userId: string; name: string; isDefault: boolean; createdAt: Date }) => workspaces.set(workspace.id, workspace),
+      findDefaultByUserId: (userId: string) => [...workspaces.values()].find((workspace) => workspace.userId === userId && workspace.isDefault) ?? null,
+    };
+    const registerUser = new RegisterUserUseCase({ users: userRepository, workspaces: workspaceRepository, transaction: (operation) => operation(), passwordHasher, idGenerator: () => `id-${++sequence}` });
     const loginUser = new LoginUserUseCase({ users: userRepository, sessions: sessionRepository, passwordHasher, tokenGenerator: () => 'session-token', idGenerator: () => `session-${++sequence}` });
 
     app.register(cookie);
@@ -33,6 +39,7 @@ describe('authentication routes', () => {
       logoutUser: new LogoutUserUseCase(sessionRepository),
       getAuthenticatedUser: new GetAuthenticatedUserUseCase({ users: userRepository, sessions: sessionRepository }),
     });
+    registerWorkspaceRoutes(app, { getAuthenticatedUser: new GetAuthenticatedUserUseCase({ users: userRepository, sessions: sessionRepository }), workspaces: workspaceRepository });
     return app;
   }
 
@@ -58,6 +65,19 @@ describe('authentication routes', () => {
     expect((await app.inject({ method: 'GET', url: '/auth/me', headers: { cookie: sessionCookie } })).statusCode).toBe(200);
     expect((await app.inject({ method: 'POST', url: '/auth/logout', headers: { cookie: sessionCookie } })).statusCode).toBe(204);
     expect((await app.inject({ method: 'GET', url: '/auth/me', headers: { cookie: sessionCookie } })).statusCode).toBe(401);
+  });
+
+  it('returns the authenticated user default workspace and blocks anonymous access', async () => {
+    const app = createTestApp();
+    await app.inject({ method: 'POST', url: '/auth/register', payload: { name: 'A', email: 'a@example.com', password: '12345678', passwordConfirmation: '12345678' } });
+    const login = await app.inject({ method: 'POST', url: '/auth/login', payload: { email: 'a@example.com', password: '12345678' } });
+    const setCookie = login.headers['set-cookie'];
+    const sessionCookie = (Array.isArray(setCookie) ? setCookie[0] : setCookie)?.split(';')[0];
+
+    expect((await app.inject({ method: 'GET', url: '/workspaces/default' })).statusCode).toBe(401);
+    const response = await app.inject({ method: 'GET', url: '/workspaces/default', headers: { cookie: sessionCookie } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ workspace: { userId: 'id-1', isDefault: true } });
   });
 
   it('returns field-level validation details without route conditionals', async () => {
