@@ -2,6 +2,8 @@ import { createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSa
 import { promisify } from 'node:util';
 import { AppError, User } from '@llm-lab/domain';
 
+export * from './assistant.js';
+
 const scrypt = promisify(scryptCallback);
 
 export type UserSnapshotLike = {

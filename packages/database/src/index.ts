@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { SessionInput, UserRepository, UserSnapshotLike, WorkspaceInput, WorkspaceRepository } from '@llm-lab/auth';
+import type { AssistantInput, AssistantRepository, SessionInput, UserRepository, UserSnapshotLike, WorkspaceInput, WorkspaceRepository } from '@llm-lab/auth';
 
 export type DatabaseConnection = Database.Database;
 export type UserRecord = UserSnapshotLike;
@@ -35,6 +35,19 @@ export function createDatabase(filename = process.env.DATABASE_PATH ?? ':memory:
       created_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS assistants (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      system_instructions TEXT NOT NULL,
+      model TEXT NOT NULL,
+      temperature REAL NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('active', 'inactive')),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+    );
   `);
   return database;
 }
@@ -63,6 +76,15 @@ export function createUserRepository(database: DatabaseConnection): UserReposito
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       });
+    },
+  };
+}
+
+export function createAssistantRepository(database: DatabaseConnection): AssistantRepository {
+  const insertStatement = database.prepare('INSERT INTO assistants (id, workspace_id, name, description, system_instructions, model, temperature, status, created_at, updated_at) VALUES (@id, @workspaceId, @name, @description, @systemInstructions, @model, @temperature, @status, @createdAt, @updatedAt)');
+  return {
+    insert(assistant: AssistantInput): void {
+      insertStatement.run({ id: assistant.id, workspaceId: assistant.workspaceId, name: assistant.name, description: assistant.description, systemInstructions: assistant.systemInstructions, model: assistant.model, temperature: assistant.temperature, status: assistant.status, createdAt: assistant.createdAt.toISOString(), updatedAt: assistant.updatedAt.toISOString() });
     },
   };
 }
