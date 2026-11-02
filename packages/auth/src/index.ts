@@ -3,6 +3,7 @@ import { promisify } from 'node:util';
 import { AppError, User } from '@llm-lab/domain';
 
 export * from './assistant.js';
+export * from './conversation.js';
 
 const scrypt = promisify(scryptCallback);
 
