@@ -23,6 +23,7 @@ export function createDatabase(filename = process.env.DATABASE_PATH ?? ':memory:
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL UNIQUE,
       name TEXT NOT NULL,
+      is_default INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
@@ -67,15 +68,21 @@ export function createUserRepository(database: DatabaseConnection): UserReposito
 }
 
 export function createWorkspaceRepository(database: DatabaseConnection): WorkspaceRepository {
-  const insertWorkspaceStatement = database.prepare('INSERT INTO workspaces (id, user_id, name, created_at) VALUES (@id, @userId, @name, @createdAt)');
+  const insertWorkspaceStatement = database.prepare('INSERT INTO workspaces (id, user_id, name, is_default, created_at) VALUES (@id, @userId, @name, @isDefault, @createdAt)');
+  const findDefaultWorkspaceStatement = database.prepare('SELECT id, user_id, name, is_default, created_at FROM workspaces WHERE user_id = ? AND is_default = 1');
   return {
     insert(workspace) {
       insertWorkspaceStatement.run({
         id: workspace.id,
         userId: workspace.userId,
         name: workspace.name,
+        isDefault: workspace.isDefault ? 1 : 0,
         createdAt: workspace.createdAt.toISOString(),
       });
+    },
+    findDefaultByUserId(userId: string): WorkspaceRecord | null {
+      const row = findDefaultWorkspaceStatement.get(userId) as WorkspaceRow | undefined;
+      return row ? mapWorkspaceRow(row) : null;
     },
   };
 }
@@ -103,8 +110,13 @@ export function createUserRegistrationTransaction(database: DatabaseConnection):
 }
 
 type UserRow = { id: string; name: string; email: string; password_hash: string; status: 'active' | 'inactive'; created_at: string; updated_at: string };
+type WorkspaceRow = { id: string; user_id: string; name: string; is_default: number; created_at: string };
 type SessionRow = { id: string; user_id: string; token_hash: string; expires_at: string; created_at: string };
 
 function mapUserRow(row: UserRow): UserRecord {
   return { id: row.id, name: row.name, email: row.email, passwordHash: row.password_hash, status: row.status, createdAt: new Date(row.created_at), updatedAt: new Date(row.updated_at) };
+}
+
+function mapWorkspaceRow(row: WorkspaceRow): WorkspaceRecord {
+  return { id: row.id, userId: row.user_id, name: row.name, isDefault: row.is_default === 1, createdAt: new Date(row.created_at) };
 }

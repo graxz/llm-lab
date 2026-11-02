@@ -18,6 +18,7 @@ export type WorkspaceInput = {
   id: string;
   userId: string;
   name: string;
+  isDefault: boolean;
   createdAt: Date;
 };
 
@@ -29,6 +30,7 @@ export type UserRepository = {
 
 export type WorkspaceRepository = {
   insert(workspace: WorkspaceInput): void;
+  findDefaultByUserId(userId: string): WorkspaceInput | null;
 };
 
 export type SessionInput = {
@@ -92,6 +94,13 @@ export class SessionNotFoundError extends AppError {
   }
 }
 
+export class WorkspaceNotFoundError extends AppError {
+  constructor() {
+    super('WORKSPACE_NOT_FOUND', 404, 'Workspace not found');
+    this.name = 'WorkspaceNotFoundError';
+  }
+}
+
 export class PasswordHasher {
   async hash(password: string): Promise<string> {
     const salt = randomBytes(16).toString('hex');
@@ -135,6 +144,7 @@ export class RegisterUserUseCase {
       id: idGenerator(),
       userId: user.id,
       name: `${user.name}'s Workspace`,
+      isDefault: true,
       createdAt: new Date(),
     };
 

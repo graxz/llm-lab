@@ -49,6 +49,6 @@ export function buildApp() {
     database.close();
   });
 
-  registerRoutes(app, { registerUser, loginUser, logoutUser, getAuthenticatedUser });
+  registerRoutes(app, { registerUser, loginUser, logoutUser, getAuthenticatedUser, workspaces });
   return app;
 }

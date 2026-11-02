@@ -25,9 +25,13 @@ function setup() {
     findByTokenHash: (tokenHash: string) => sessions.get(tokenHash) ?? null,
     deleteByTokenHash: (tokenHash: string) => sessions.delete(tokenHash),
   };
+  const workspaceRepository = {
+    insert: (workspace: any) => workspaces.set(workspace.id, workspace),
+    findDefaultByUserId: (userId: string) => [...workspaces.values()].find((workspace) => workspace.userId === userId && workspace.isDefault) ?? null,
+  };
   const dependencies = {
     users: userRepository,
-    workspaces: { insert: (workspace: any) => workspaces.set(workspace.id, workspace) },
+    workspaces: workspaceRepository,
     transaction: (operation: () => void) => operation(),
     passwordHasher: new PasswordHasher(),
     idGenerator: () => `id-${++id}`,

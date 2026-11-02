@@ -17,6 +17,7 @@ describe('SQLite registration persistence', () => {
       id: 'workspace-1',
       userId: user.id,
       name: 'Isaddora Workspace',
+      isDefault: true,
       createdAt: new Date(),
     };
 
@@ -29,6 +30,12 @@ describe('SQLite registration persistence', () => {
       id: 'user-1',
       email: 'isaddora@example.com',
     });
+    expect(workspaces.findDefaultByUserId(user.id)).toMatchObject({
+      id: 'workspace-1',
+      userId: user.id,
+      isDefault: true,
+    });
+    expect(workspaces.findDefaultByUserId('another-user')).toBeNull();
     expect(database.prepare('SELECT COUNT(*) as count FROM workspaces').get()).toEqual({ count: 1 });
     database.close();
   });
