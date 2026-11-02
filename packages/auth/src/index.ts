@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { AppError, User, ValidationError } from '@llm-lab/domain';
+import { AppError, User } from '@llm-lab/domain';
 
 const scrypt = promisify(scryptCallback);
 
@@ -78,13 +78,6 @@ export class EmailAlreadyRegisteredError extends AppError {
   }
 }
 
-export class InvalidRegistrationInputError extends ValidationError {
-  constructor(field: string, code: string, message: string) {
-    super([{ field, code, message }]);
-    this.name = 'InvalidRegistrationInputError';
-  }
-}
-
 export class InvalidCredentialsError extends AppError {
   constructor() {
     super('INVALID_CREDENTIALS', 401, 'Invalid email or password');
@@ -128,16 +121,7 @@ export class RegisterUserUseCase {
   ) {}
 
   async execute(input: RegisterUserInput): Promise<RegisterUserOutput> {
-    const name = input.name.trim();
-    const email = input.email.trim().toLowerCase();
-
-    if (!name) throw new InvalidRegistrationInputError('name', 'REQUIRED', 'Name is required');
-    if (!email) throw new InvalidRegistrationInputError('email', 'REQUIRED', 'Email is required');
-    if (!input.password) throw new InvalidRegistrationInputError('password', 'REQUIRED', 'Password is required');
-    if (input.password.length < 8) throw new InvalidRegistrationInputError('password', 'MIN_LENGTH', 'Password must have at least 8 characters');
-    if (input.password !== input.passwordConfirmation) {
-      throw new InvalidRegistrationInputError('passwordConfirmation', 'MISMATCH', 'Password confirmation does not match');
-    }
+    const { name, email, password } = input;
     if (this.dependencies.users.findByEmail(email)) throw new EmailAlreadyRegisteredError();
 
     const idGenerator = this.dependencies.idGenerator ?? randomUUID;
@@ -145,7 +129,7 @@ export class RegisterUserUseCase {
       id: idGenerator(),
       name,
       email,
-      passwordHash: await this.dependencies.passwordHasher.hash(input.password),
+      passwordHash: await this.dependencies.passwordHasher.hash(password),
     });
     const workspace: WorkspaceInput = {
       id: idGenerator(),
@@ -176,7 +160,7 @@ export class LoginUserUseCase {
   ) {}
 
   async execute(input: LoginUserInput): Promise<{ user: AuthenticatedUser; sessionToken: string; expiresAt: Date }> {
-    const email = input.email.trim().toLowerCase();
+    const { email } = input;
     const user = this.dependencies.users.findByEmail(email);
     const passwordMatches = user ? await this.dependencies.passwordHasher.verify(input.password, user.passwordHash) : false;
 

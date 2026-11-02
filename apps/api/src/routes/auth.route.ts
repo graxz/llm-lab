@@ -4,11 +4,9 @@ import {
   LoginUserUseCase,
   LogoutUserUseCase,
   RegisterUserUseCase,
-  SessionNotFoundError,
-  type LoginUserInput,
-  type RegisterUserInput,
-  type RegisterUserOutput,
 } from '@llm-lab/auth';
+
+import { loginUserSchema, parseBody, registerUserSchema } from '../http/validation.js';
 
 export const SESSION_COOKIE = 'llm_lab_session';
 
@@ -20,12 +18,12 @@ type AuthRouteDependencies = {
 };
 
 export function registerAuthRoutes(app: FastifyInstance, dependencies: AuthRouteDependencies): void {
-  app.post<{ Body: RegisterUserInput; Reply: RegisterUserOutput | ErrorResponse }>('/auth/register', async (request, reply) => {
-    return reply.code(201).send(await dependencies.registerUser.execute(request.body));
+  app.post('/auth/register', async (request, reply) => {
+    return reply.code(201).send(await dependencies.registerUser.execute(parseBody(registerUserSchema, request.body)));
   });
 
-  app.post<{ Body: LoginUserInput }>('/auth/login', async (request, reply) => {
-    const result = await dependencies.loginUser.execute(request.body);
+  app.post('/auth/login', async (request, reply) => {
+    const result = await dependencies.loginUser.execute(parseBody(loginUserSchema, request.body));
     reply.setCookie(SESSION_COOKIE, result.sessionToken, cookieOptions(result.expiresAt));
     return reply.code(200).send({ user: result.user, expiresAt: result.expiresAt });
   });
@@ -43,8 +41,6 @@ export function registerAuthRoutes(app: FastifyInstance, dependencies: AuthRoute
     return reply.code(200).send({ user: dependencies.getAuthenticatedUser.execute(sessionToken) });
   });
 }
-
-type ErrorResponse = { code: string; message: string; details?: unknown };
 
 function cookieOptions(expiresAt: Date) {
   return {
