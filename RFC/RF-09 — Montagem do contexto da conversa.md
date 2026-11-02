@@ -33,3 +33,52 @@ Construir a entrada enviada ao modelo a partir das instruções e do histórico 
 - Resumo automático de histórico.
 - RAG.
 - Memória de longo prazo.
+
+## Especificação spec-driven
+
+### User story
+Como sistema, quero montar um contexto determinístico para que o modelo receba instruções e histórico relevantes.
+
+### Pré-condições
+- A conversa e o assistente foram carregados.
+- A mensagem atual foi validada.
+- Existe uma política de limite de contexto.
+
+### Cenários de aceitação
+
+#### Cenário 1
+Dado um histórico válido, quando o contexto for montado, então as mensagens devem preservar a ordem.
+
+#### Cenário 2
+Quando o histórico exceder o limite, então o truncamento deve seguir política determinística.
+
+#### Cenário 3
+Quando o modelo for chamado, então a mensagem atual deve estar presente ou a execução deve falhar explicitamente.
+
+### Regras de negócio
+- Instruções do assistente precedem o histórico.
+- O contexto deve respeitar limite de tokens ou caracteres configurado.
+- Truncamento não pode ocorrer silenciosamente sem metadado.
+
+### Invariantes
+- O contexto utilizado pode ser identificado pela geração.
+- A ordem semântica das mensagens mantidas é preservada.
+
+### Erros e respostas esperadas
+
+- `400` para contexto impossível de montar.
+- `413` quando o contexto mínimo exceder o limite.
+- `500` para falha inesperada na montagem.
+
+### Fora do escopo deste RF
+- RAG.
+- Memória de longo prazo.
+- Resumo automático de histórico.
+
+### Definition of Done
+- [ ] Fluxo principal implementado.
+- [ ] Cenários de aceitação cobertos por testes.
+- [ ] Autorização e isolamento por workspace validados.
+- [ ] Erros públicos e logs técnicos separados.
+- [ ] Observabilidade mínima adicionada.
+- [ ] Documentação atualizada após a implementação.

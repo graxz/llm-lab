@@ -34,3 +34,54 @@ Exibir progressivamente a resposta gerada, sem aguardar o conteúdo completo.
 
 ## Decisão inicial sugerida
 Usar Server-Sent Events para transportar eventos unidirecionais do backend para o frontend.
+
+## Especificação spec-driven
+
+### User story
+Como usuário, quero visualizar a resposta progressivamente para reduzir a espera percebida.
+
+### Pré-condições
+- Uma geração foi criada.
+- O cliente possui conexão de stream.
+- O provedor suporta streaming ou existe fallback definido.
+
+### Cenários de aceitação
+
+#### Cenário 1
+Quando a geração iniciar, então seu estado deve mudar para streaming.
+
+#### Cenário 2
+Enquanto fragmentos chegarem, então o cliente deve atualizar o conteúdo progressivamente.
+
+#### Cenário 3
+Quando o stream terminar, então um evento final deve ser emitido e a geração deve poder ser persistida.
+
+#### Cenário 4
+Quando houver falha, então o cliente deve receber um evento de erro e a geração não pode ser marcada como concluída.
+
+### Regras de negócio
+- Estados permitidos são pending, streaming, completed, failed e cancelled.
+- Cada evento pertence a uma geração.
+- Desconexão do cliente deve liberar recursos.
+
+### Invariantes
+- Geração failed ou cancelled nunca é completed.
+- Fragmentos não podem ser atribuídos a outra conversa.
+
+### Erros e respostas esperadas
+
+- Evento de erro associado à geração.
+- Geração marcada como `failed` em falha de stream.
+- Nenhum erro deve expor credenciais ou resposta interna do provedor.
+
+### Fora do escopo deste RF
+- Colaboração em tempo real bidirecional.
+- Edição colaborativa do texto.
+
+### Definition of Done
+- [ ] Fluxo principal implementado.
+- [ ] Cenários de aceitação cobertos por testes.
+- [ ] Autorização e isolamento por workspace validados.
+- [ ] Erros públicos e logs técnicos separados.
+- [ ] Observabilidade mínima adicionada.
+- [ ] Documentação atualizada após a implementação.

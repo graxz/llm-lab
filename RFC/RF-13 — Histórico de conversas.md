@@ -31,3 +31,54 @@ Permitir consultar, organizar e reabrir conversas anteriores.
 - Busca semântica no histórico.
 - Compartilhamento de conversas.
 - Exportação avançada.
+
+## Especificação spec-driven
+
+### User story
+Como usuário, quero consultar e reabrir minhas conversas anteriores dentro do workspace autorizado.
+
+### Pré-condições
+- O usuário está autenticado.
+- A conversa pertence a um workspace acessível.
+
+### Cenários de aceitação
+
+#### Cenário 1
+Quando o usuário listar conversas, então elas devem ser ordenadas por atividade recente.
+
+#### Cenário 2
+Quando o usuário abrir uma conversa, então suas mensagens devem aparecer em ordem.
+
+#### Cenário 3
+Quando uma conversa for arquivada, então ela deve deixar a lista principal sem ser apagada indevidamente.
+
+#### Cenário 4
+Quando outro usuário tentar acessar a conversa, então o acesso deve ser rejeitado.
+
+### Regras de negócio
+- Listagens devem respeitar workspace e usuário.
+- Paginação deve ser determinística.
+- Arquivamento altera visibilidade, não necessariamente remove dados.
+
+### Invariantes
+- Nenhuma conversa fora da autorização aparece.
+- Mensagens preservam sua ordenação.
+
+### Erros e respostas esperadas
+
+- `401` para sessão ausente.
+- `403` para conversa de outro workspace.
+- `404` quando a conversa não existir.
+
+### Fora do escopo deste RF
+- Busca semântica no histórico.
+- Compartilhamento.
+- Exportação avançada.
+
+### Definition of Done
+- [ ] Fluxo principal implementado.
+- [ ] Cenários de aceitação cobertos por testes.
+- [ ] Autorização e isolamento por workspace validados.
+- [ ] Erros públicos e logs técnicos separados.
+- [ ] Observabilidade mínima adicionada.
+- [ ] Documentação atualizada após a implementação.
