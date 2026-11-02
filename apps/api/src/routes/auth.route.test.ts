@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import { describe, expect, it } from 'vitest';
 import { GetAuthenticatedUserUseCase, LoginUserUseCase, LogoutUserUseCase, PasswordHasher, RegisterUserUseCase, type SessionInput, type UserSnapshotLike } from '@llm-lab/auth';
+import { registerErrorHandler } from '../http/error-handler.js';
 import { registerAuthRoutes } from './auth.route.js';
 
 describe('authentication routes', () => {
@@ -21,6 +22,7 @@ describe('authentication routes', () => {
     const passwordHasher = new PasswordHasher();
     let sequence = 0;
     const app = Fastify();
+    registerErrorHandler(app);
     const registerUser = new RegisterUserUseCase({ users: userRepository, workspaces: { insert: () => undefined }, transaction: (operation) => operation(), passwordHasher, idGenerator: () => `id-${++sequence}` });
     const loginUser = new LoginUserUseCase({ users: userRepository, sessions: sessionRepository, passwordHasher, tokenGenerator: () => 'session-token', idGenerator: () => `session-${++sequence}` });
 
@@ -56,5 +58,14 @@ describe('authentication routes', () => {
     expect((await app.inject({ method: 'GET', url: '/auth/me', headers: { cookie: sessionCookie } })).statusCode).toBe(200);
     expect((await app.inject({ method: 'POST', url: '/auth/logout', headers: { cookie: sessionCookie } })).statusCode).toBe(204);
     expect((await app.inject({ method: 'GET', url: '/auth/me', headers: { cookie: sessionCookie } })).statusCode).toBe(401);
+  });
+
+  it('returns field-level validation details without route conditionals', async () => {
+    const response = await createTestApp().inject({ method: 'POST', url: '/auth/register', payload: { email: 'invalid', password: '' } });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      details: { issues: expect.arrayContaining([expect.objectContaining({ field: 'name' }), expect.objectContaining({ field: 'email' })]) },
+    });
   });
 });

@@ -1,7 +1,6 @@
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import Fastify from 'fastify';
-import { AppError } from '@llm-lab/domain';
 import {
   GetAuthenticatedUserUseCase,
   LoginUserUseCase,
@@ -18,6 +17,7 @@ import {
 } from '@llm-lab/database';
 
 import { registerRoutes } from './routes/index.js';
+import { registerErrorHandler } from './http/error-handler.js';
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -28,18 +28,7 @@ export function buildApp() {
   });
   app.register(cookie);
 
-  app.setErrorHandler((error, request, reply) => {
-    if (error instanceof AppError) {
-      return reply.code(error.statusCode).send({
-        code: error.code,
-        message: error.message,
-        ...(error.details ? { details: error.details } : {}),
-      });
-    }
-
-    request.log.error(error);
-    return reply.code(500).send({ code: 'INTERNAL_ERROR', message: 'Unexpected internal error' });
-  });
+  registerErrorHandler(app);
 
   const database = createDatabase();
   const users = createUserRepository(database);
