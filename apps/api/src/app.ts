@@ -9,6 +9,7 @@ import {
   RegisterUserUseCase,
   CreateAssistantUseCase,
   ManageAssistantUseCase,
+  CreateConversationUseCase,
 } from '@llm-lab/auth';
 import {
   createDatabase,
@@ -17,6 +18,7 @@ import {
   createUserRepository,
   createWorkspaceRepository,
   createAssistantRepository,
+  createConversationRepository,
 } from '@llm-lab/database';
 
 import { registerRoutes } from './routes/index.js';
@@ -37,6 +39,7 @@ export function buildApp() {
   const users = createUserRepository(database);
   const workspaces = createWorkspaceRepository(database);
   const assistants = createAssistantRepository(database);
+  const conversations = createConversationRepository(database);
   const sessions = createSessionRepository(database);
   const passwordHasher = new PasswordHasher();
   const registerUser = new RegisterUserUseCase({
@@ -50,11 +53,12 @@ export function buildApp() {
   const getAuthenticatedUser = new GetAuthenticatedUserUseCase({ users, sessions });
   const createAssistant = new CreateAssistantUseCase({ assistants, workspaces });
   const manageAssistant = new ManageAssistantUseCase(assistants);
+  const createConversation = new CreateConversationUseCase({ conversations, assistants, workspaces });
 
   app.addHook('onClose', async () => {
     database.close();
   });
 
-  registerRoutes(app, { registerUser, loginUser, logoutUser, getAuthenticatedUser, workspaces, createAssistant, manageAssistant });
+  registerRoutes(app, { registerUser, loginUser, logoutUser, getAuthenticatedUser, workspaces, createAssistant, manageAssistant, createConversation });
   return app;
 }

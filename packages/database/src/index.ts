@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { AssistantInput, AssistantRepository, SessionInput, UserRepository, UserSnapshotLike, WorkspaceInput, WorkspaceRepository } from '@llm-lab/auth';
+import type { AssistantInput, AssistantRepository, ConversationInput, ConversationRepository, SessionInput, UserRepository, UserSnapshotLike, WorkspaceInput, WorkspaceRepository } from '@llm-lab/auth';
 
 export type DatabaseConnection = Database.Database;
 export type UserRecord = UserSnapshotLike;
@@ -48,6 +48,19 @@ export function createDatabase(filename = process.env.DATABASE_PATH ?? ':memory:
       updated_at TEXT NOT NULL,
       FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
     );
+    CREATE TABLE IF NOT EXISTS conversations (
+      id TEXT PRIMARY KEY,
+      workspace_id TEXT NOT NULL,
+      assistant_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('active', 'archived')),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+      FOREIGN KEY (assistant_id) REFERENCES assistants(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
   `);
   return database;
 }
@@ -95,6 +108,11 @@ export function createAssistantRepository(database: DatabaseConnection): Assista
     update(assistant) { updateStatement.run({ id: assistant.id, name: assistant.name, description: assistant.description, systemInstructions: assistant.systemInstructions, model: assistant.model, temperature: assistant.temperature, status: assistant.status, updatedAt: assistant.updatedAt.toISOString() }); },
     softDelete(id) { deleteStatement.run({ id, updatedAt: new Date().toISOString() }); },
   };
+}
+
+export function createConversationRepository(database: DatabaseConnection): ConversationRepository {
+  const insertStatement = database.prepare('INSERT INTO conversations (id, workspace_id, assistant_id, user_id, title, status, created_at, updated_at) VALUES (@id, @workspaceId, @assistantId, @userId, @title, @status, @createdAt, @updatedAt)');
+  return { insert(conversation: ConversationInput): void { insertStatement.run({ id: conversation.id, workspaceId: conversation.workspaceId, assistantId: conversation.assistantId, userId: conversation.userId, title: conversation.title, status: conversation.status, createdAt: conversation.createdAt.toISOString(), updatedAt: conversation.updatedAt.toISOString() }); } };
 }
 
 export function createWorkspaceRepository(database: DatabaseConnection): WorkspaceRepository {
