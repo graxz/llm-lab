@@ -36,6 +36,7 @@ export class GenerationService {
     } catch { generation.status = 'failed'; generation.errorCode = 'PERSISTENCE_FAILURE'; generation.finishedAt = new Date(); this.dependencies.generations.update(generation); throw new GenerationPersistenceError(); }
   }
   fail(id: string, errorCode = 'PROVIDER_FAILURE'): Generation { const generation = this.required(id); if (['completed', 'failed', 'cancelled'].includes(generation.status)) throw new InvalidGenerationTransitionError(); generation.status = 'failed'; generation.errorCode = errorCode; generation.finishedAt = new Date(); this.dependencies.generations.update(generation); return generation; }
+  cancel(id: string): Generation { const generation = this.required(id); if (generation.status === 'cancelled') return generation; if (['completed', 'failed'].includes(generation.status)) throw new InvalidGenerationTransitionError(); generation.status = 'cancelled'; generation.errorCode = 'CANCELLED_BY_USER'; generation.finishedAt = new Date(); this.dependencies.generations.update(generation); return generation; }
   private transition(id: string, status: 'streaming'): Generation { const generation = this.required(id); if (generation.status !== 'pending') throw new InvalidGenerationTransitionError(); generation.status = status; this.dependencies.generations.update(generation); return generation; }
   private required(id: string): Generation { const generation = this.dependencies.generations.findById(id); if (!generation) throw new Error('Generation not found'); return generation; }
 }
