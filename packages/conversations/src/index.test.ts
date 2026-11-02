@@ -1,0 +1,8 @@
+import { describe, expect, it } from 'vitest';
+import { GenerationPersistenceError, GenerationService } from './index.js';
+
+describe('GenerationService', () => {
+  const make = (failPersist = false) => { const records = new Map<string, any>(); const messages: any[] = []; const service = new GenerationService({ generations: { insert: (g) => records.set(g.id, g), update: (g) => records.set(g.id, g), findById: (id) => records.get(id) ?? null }, messages: { insert: (m) => { if (failPersist) throw new Error(); messages.push(m); } }, idGenerator: () => `id-${records.size + messages.length + 1}` }); return { service, records, messages }; };
+  it('persists the assistant response before completing a generation', () => { const { service, records, messages } = make(); const generation = service.create({ conversationId: 'c1', userMessageId: 'm1', model: 'gpt-4o-mini', temperature: 0.2 }); service.start(generation.id); service.append(generation.id, 'hello'); const completed = service.complete(generation.id, { sequence: 2, completionTokens: 1 }); expect(completed.status).toBe('completed'); expect(messages[0].generationId).toBe(generation.id); expect(records.get(generation.id).status).toBe('completed'); });
+  it('marks the generation failed when final persistence fails', () => { const { service, records } = make(true); const generation = service.create({ conversationId: 'c1', userMessageId: 'm1', model: 'gpt-4o-mini', temperature: 0.2 }); service.start(generation.id); service.append(generation.id, 'partial'); expect(() => service.complete(generation.id, { sequence: 2 })).toThrow(GenerationPersistenceError); expect(records.get(generation.id).status).toBe('failed'); });
+});
