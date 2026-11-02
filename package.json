@@ -1,5 +1,13 @@
 {
-  "devDependencies": {
-    "typescript": "^7.0.2"
+  "name": "llm-lab",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "typecheck": "npm run typecheck --workspaces"
   }
 }
